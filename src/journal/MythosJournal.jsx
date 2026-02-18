@@ -249,7 +249,7 @@ export default function MythosJournal() {
   ];
 
   return (
-    <div style={{ fontFamily: "'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif", maxWidth: 560, margin: "0 auto", minHeight: "100vh", background: "#fff", color: "#333" }}>
+    <div style={{ fontFamily: "'LINE Seed JP', -apple-system, BlinkMacSystemFont, sans-serif", maxWidth: 560, margin: "0 auto", minHeight: "100vh", background: "#fff", color: "#333" }}>
       <div style={{ padding: "28px 24px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h1 style={{ fontSize: 18, fontWeight: 600, color: "#333", margin: 0, letterSpacing: "0.02em" }}>Mythos Journal</h1>
