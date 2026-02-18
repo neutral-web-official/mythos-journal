@@ -17,7 +17,7 @@ export default function EditorPanel({ pageId, panelId, label }) {
   useEffect(() => {
     const updateHeight = () => {
       if (containerRef.current) {
-        const headerHeight = 37; // header height
+        const headerHeight = 37;
         const containerHeight = containerRef.current.offsetHeight;
         setEditorHeight(Math.max(containerHeight - headerHeight, 100));
       }
@@ -26,12 +26,15 @@ export default function EditorPanel({ pageId, panelId, label }) {
     updateHeight();
     window.addEventListener("resize", updateHeight);
 
-    // Also update after a short delay for initial render
-    const timer = setTimeout(updateHeight, 100);
+    // Use ResizeObserver for panel resize detection
+    const resizeObserver = new ResizeObserver(updateHeight);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
 
     return () => {
       window.removeEventListener("resize", updateHeight);
-      clearTimeout(timer);
+      resizeObserver.disconnect();
     };
   }, []);
 
@@ -107,9 +110,9 @@ export default function EditorPanel({ pageId, panelId, label }) {
         <MDEditor
           value={content}
           onChange={handleChange}
-          preview="edit"
-          hideToolbar={true}
+          preview="live"
           height={editorHeight}
+          visibleDragbar={false}
           textareaProps={{
             placeholder: `${label}を入力...`,
           }}
