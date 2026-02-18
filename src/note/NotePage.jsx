@@ -1,50 +1,16 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import {
-  Panel,
-  Group as PanelGroup,
-  Separator as PanelResizeHandle,
-} from "react-resizable-panels";
 import { STORAGE_KEYS, load } from "../shared/storage.js";
 import EditorPanel from "./EditorPanel.jsx";
 
 const PANELS = [
-  { id: "summary", label: "概要", row: 0, col: 0 },
-  { id: "lineage", label: "来歴・血統", row: 0, col: 1 },
-  { id: "episode", label: "エピソード", row: 1, col: 0 },
-  { id: "art", label: "美術作品", row: 1, col: 1 },
-  { id: "question", label: "疑問点", row: 2, col: 0 },
-  { id: "modern", label: "現代での引用", row: 2, col: 1 },
+  { id: "summary", label: "概要" },
+  { id: "lineage", label: "来歴・血統" },
+  { id: "episode", label: "エピソード" },
+  { id: "art", label: "美術作品" },
+  { id: "question", label: "疑問点" },
+  { id: "modern", label: "現代での引用" },
 ];
-
-const leftPanels = PANELS.filter((p) => p.col === 0);
-const rightPanels = PANELS.filter((p) => p.col === 1);
-
-function ResizeHandle({ direction = "vertical" }) {
-  return (
-    <PanelResizeHandle
-      style={{
-        width: direction === "vertical" ? 6 : "100%",
-        height: direction === "vertical" ? "100%" : 6,
-        background: "transparent",
-        cursor: direction === "vertical" ? "col-resize" : "row-resize",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <div
-        style={{
-          width: direction === "vertical" ? 2 : "80%",
-          height: direction === "vertical" ? "80%" : 2,
-          background: "#e8e8e8",
-          borderRadius: 1,
-          transition: "background 0.2s",
-        }}
-      />
-    </PanelResizeHandle>
-  );
-}
 
 export default function NotePage() {
   const { categoryId, pageId } = useParams();
@@ -118,54 +84,25 @@ export default function NotePage() {
       </div>
 
       {/* 3x2 Grid of Editors */}
-      <div style={{ flex: 1, padding: 12, overflow: "hidden" }}>
-        <PanelGroup direction="horizontal" style={{ height: "100%" }}>
-          {/* Left Column */}
-          <Panel defaultSize={50} minSize={25}>
-            <PanelGroup direction="vertical" style={{ height: "100%" }}>
-              {leftPanels.map((panel, idx) => (
-                <div key={panel.id} style={{ display: "contents" }}>
-                  <Panel defaultSize={33.33} minSize={15}>
-                    <div style={{ height: "100%", padding: 4 }}>
-                      <EditorPanel
-                        pageId={pageId}
-                        panelId={panel.id}
-                        label={panel.label}
-                      />
-                    </div>
-                  </Panel>
-                  {idx < leftPanels.length - 1 && (
-                    <ResizeHandle direction="horizontal" />
-                  )}
-                </div>
-              ))}
-            </PanelGroup>
-          </Panel>
-
-          <ResizeHandle direction="vertical" />
-
-          {/* Right Column */}
-          <Panel defaultSize={50} minSize={25}>
-            <PanelGroup direction="vertical" style={{ height: "100%" }}>
-              {rightPanels.map((panel, idx) => (
-                <div key={panel.id} style={{ display: "contents" }}>
-                  <Panel defaultSize={33.33} minSize={15}>
-                    <div style={{ height: "100%", padding: 4 }}>
-                      <EditorPanel
-                        pageId={pageId}
-                        panelId={panel.id}
-                        label={panel.label}
-                      />
-                    </div>
-                  </Panel>
-                  {idx < rightPanels.length - 1 && (
-                    <ResizeHandle direction="horizontal" />
-                  )}
-                </div>
-              ))}
-            </PanelGroup>
-          </Panel>
-        </PanelGroup>
+      <div
+        style={{
+          flex: 1,
+          padding: 12,
+          overflow: "hidden",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gridTemplateRows: "1fr 1fr 1fr",
+          gap: 8,
+        }}
+      >
+        {PANELS.map((panel) => (
+          <EditorPanel
+            key={panel.id}
+            pageId={pageId}
+            panelId={panel.id}
+            label={panel.label}
+          />
+        ))}
       </div>
     </div>
   );

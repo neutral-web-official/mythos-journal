@@ -5,12 +5,35 @@ import { getNoteContentKey, load, save } from "../shared/storage.js";
 export default function EditorPanel({ pageId, panelId, label }) {
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editorHeight, setEditorHeight] = useState(200);
+  const containerRef = useRef(null);
   const saveTimeoutRef = useRef(null);
   const storageKey = getNoteContentKey(pageId, panelId);
 
   useEffect(() => {
     setContent(load(storageKey, ""));
   }, [storageKey]);
+
+  useEffect(() => {
+    const updateHeight = () => {
+      if (containerRef.current) {
+        const headerHeight = 37; // header height
+        const containerHeight = containerRef.current.offsetHeight;
+        setEditorHeight(Math.max(containerHeight - headerHeight, 100));
+      }
+    };
+
+    updateHeight();
+    window.addEventListener("resize", updateHeight);
+
+    // Also update after a short delay for initial render
+    const timer = setTimeout(updateHeight, 100);
+
+    return () => {
+      window.removeEventListener("resize", updateHeight);
+      clearTimeout(timer);
+    };
+  }, []);
 
   const debouncedSave = useCallback(
     (value) => {
@@ -42,6 +65,7 @@ export default function EditorPanel({ pageId, panelId, label }) {
 
   return (
     <div
+      ref={containerRef}
       style={{
         height: "100%",
         display: "flex",
@@ -60,6 +84,7 @@ export default function EditorPanel({ pageId, panelId, label }) {
           padding: "8px 12px",
           borderBottom: "1px solid #f0f0f0",
           background: "#fafafa",
+          flexShrink: 0,
         }}
       >
         <span
@@ -76,18 +101,15 @@ export default function EditorPanel({ pageId, panelId, label }) {
         )}
       </div>
       <div
-        style={{ flex: 1, overflow: "hidden" }}
+        style={{ flex: 1, overflow: "hidden", minHeight: 0 }}
         data-color-mode="light"
       >
         <MDEditor
           value={content}
           onChange={handleChange}
-          preview="live"
-          hideToolbar={false}
-          height="100%"
-          style={{
-            height: "100%",
-          }}
+          preview="edit"
+          hideToolbar={true}
+          height={editorHeight}
           textareaProps={{
             placeholder: `${label}を入力...`,
           }}
