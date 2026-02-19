@@ -1,96 +1,18 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import {
-  Panel,
-  Group as PanelGroup,
-  Separator as PanelResizeHandle,
-} from "react-resizable-panels";
 import { STORAGE_KEYS, load } from "../shared/storage.js";
 import EditorPanel from "./EditorPanel.jsx";
 
-const TOP_PANELS = [
+const PANELS = [
+  // Row 1
   { id: "summary", label: "概要" },
   { id: "lineage", label: "来歴・血統" },
   { id: "episode", label: "エピソード" },
-];
-
-const BOTTOM_PANELS = [
+  // Row 2
   { id: "art", label: "美術作品" },
   { id: "question", label: "疑問点" },
   { id: "modern", label: "現代での引用" },
 ];
-
-function RowPanels({ panels, pageId }) {
-  return (
-    <PanelGroup direction="horizontal">
-      <Panel defaultSize={33} minSize={15}>
-        <div style={{ height: "100%", padding: 4 }}>
-          <EditorPanel
-            pageId={pageId}
-            panelId={panels[0].id}
-            label={panels[0].label}
-          />
-        </div>
-      </Panel>
-      <PanelResizeHandle
-        style={{
-          width: 6,
-          background: "transparent",
-          cursor: "col-resize",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div
-          style={{
-            width: 2,
-            height: "80%",
-            background: "#e0e0e0",
-            borderRadius: 1,
-          }}
-        />
-      </PanelResizeHandle>
-      <Panel defaultSize={34} minSize={15}>
-        <div style={{ height: "100%", padding: 4 }}>
-          <EditorPanel
-            pageId={pageId}
-            panelId={panels[1].id}
-            label={panels[1].label}
-          />
-        </div>
-      </Panel>
-      <PanelResizeHandle
-        style={{
-          width: 6,
-          background: "transparent",
-          cursor: "col-resize",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div
-          style={{
-            width: 2,
-            height: "80%",
-            background: "#e0e0e0",
-            borderRadius: 1,
-          }}
-        />
-      </PanelResizeHandle>
-      <Panel defaultSize={33} minSize={15}>
-        <div style={{ height: "100%", padding: 4 }}>
-          <EditorPanel
-            pageId={pageId}
-            panelId={panels[2].id}
-            label={panels[2].label}
-          />
-        </div>
-      </Panel>
-    </PanelGroup>
-  );
-}
 
 export default function NotePage() {
   const { categoryId, pageId } = useParams();
@@ -163,40 +85,26 @@ export default function NotePage() {
         </div>
       </div>
 
-      {/* 2 rows x 3 columns Grid of Editors */}
-      <div style={{ flex: 1, padding: 8, overflow: "hidden" }}>
-        <PanelGroup direction="vertical">
-          {/* Top Row */}
-          <Panel defaultSize={50} minSize={20}>
-            <RowPanels panels={TOP_PANELS} pageId={pageId} />
-          </Panel>
-
-          {/* Vertical Resize Handle */}
-          <PanelResizeHandle
-            style={{
-              height: 6,
-              background: "transparent",
-              cursor: "row-resize",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <div
-              style={{
-                width: "80%",
-                height: 2,
-                background: "#e0e0e0",
-                borderRadius: 1,
-              }}
-            />
-          </PanelResizeHandle>
-
-          {/* Bottom Row */}
-          <Panel defaultSize={50} minSize={20}>
-            <RowPanels panels={BOTTOM_PANELS} pageId={pageId} />
-          </Panel>
-        </PanelGroup>
+      {/* 2 rows x 3 columns Grid */}
+      <div
+        style={{
+          flex: 1,
+          padding: 8,
+          overflow: "hidden",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gridTemplateRows: "1fr 1fr",
+          gap: 8,
+        }}
+      >
+        {PANELS.map((panel) => (
+          <EditorPanel
+            key={panel.id}
+            pageId={pageId}
+            panelId={panel.id}
+            label={panel.label}
+          />
+        ))}
       </div>
     </div>
   );
