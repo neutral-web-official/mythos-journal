@@ -2,11 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import MDEditor from "@uiw/react-md-editor";
 import { getNoteContentKey, load, save, saveImage, getImage, saveUrl, getUrl } from "../shared/storage.js";
 
-function truncateText(text, maxLength = 12) {
-  if (!text || text.length <= maxLength) return text;
-  return text.slice(0, maxLength) + "...";
-}
-
 function truncateUrlForDisplay(url, maxLength = 12) {
   if (!url || url.length <= maxLength) return url;
   try {
@@ -113,23 +108,35 @@ export default function EditorPanel({ pageId, panelId, label }) {
     });
   }, [debouncedSave]);
 
-  const createLinkMarkdown = useCallback((url) => {
-    const urlId = saveUrl(url);
-    const displayText = truncateUrlForDisplay(url);
-    return `[${displayText}](url:${urlId})`;
-  }, []);
-
   const insertLink = useCallback(() => {
+    // Find the textarea inside the editor
+    const textarea = containerRef.current?.querySelector("textarea");
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = content.slice(start, end);
+
     const url = prompt("URLを入力してください:");
     if (!url) return;
 
-    const linkMarkdown = createLinkMarkdown(url);
-    setContent((prev) => {
-      const newContent = prev + linkMarkdown;
-      debouncedSave(newContent);
-      return newContent;
-    });
-  }, [createLinkMarkdown, debouncedSave]);
+    const urlId = saveUrl(url);
+    // Use selected text as display, or truncated URL if no selection
+    const displayText = selectedText.trim() || truncateUrlForDisplay(url);
+    const linkMarkdown = `[${displayText}](url:${urlId})`;
+
+    // Replace selection or insert at cursor
+    const newContent = content.slice(0, start) + linkMarkdown + content.slice(end);
+    setContent(newContent);
+    debouncedSave(newContent);
+
+    // Restore focus and set cursor position after the inserted link
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = start + linkMarkdown.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  }, [content, debouncedSave]);
 
   const handleFileSelect = useCallback((file) => {
     if (!file || !file.type.startsWith("image/")) return;
@@ -160,19 +167,31 @@ export default function EditorPanel({ pageId, panelId, label }) {
       }
     }
 
-    // Check for URL paste
+    // Check for URL paste - insert at cursor position
     const text = e.clipboardData.getData("text");
     if (text && /^https?:\/\//.test(text.trim())) {
       e.preventDefault();
       const url = text.trim();
-      const linkMarkdown = createLinkMarkdown(url);
-      setContent((prev) => {
-        const newContent = prev + linkMarkdown;
+      const urlId = saveUrl(url);
+      const displayText = truncateUrlForDisplay(url);
+      const linkMarkdown = `[${displayText}](url:${urlId})`;
+
+      const textarea = containerRef.current?.querySelector("textarea");
+      if (textarea) {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const newContent = content.slice(0, start) + linkMarkdown + content.slice(end);
+        setContent(newContent);
         debouncedSave(newContent);
-        return newContent;
-      });
+
+        setTimeout(() => {
+          textarea.focus();
+          const newCursorPos = start + linkMarkdown.length;
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+      }
     }
-  }, [handleFileSelect, createLinkMarkdown, debouncedSave]);
+  }, [content, handleFileSelect, debouncedSave]);
 
   const handleFileInputChange = (e) => {
     const file = e.target.files?.[0];
@@ -264,7 +283,7 @@ export default function EditorPanel({ pageId, panelId, label }) {
               cursor: "pointer",
               fontFamily: "inherit",
             }}
-            title="リンクを挿入"
+            title="テキストを選択してリンクを挿入"
           >
             🔗
           </button>
@@ -323,7 +342,7 @@ export default function EditorPanel({ pageId, panelId, label }) {
             components: customComponents,
           }}
           textareaProps={{
-            placeholder: `${label}を入力...\n\n画像: ドラッグ&ドロップ / ペースト / 📷ボタン\nリンク: URLペースト / 🔗ボタン`,
+            placeholder: `${label}を入力...\n\n画像: ドラッグ&ドロップ / ペースト / 📷ボタン\nリンク: テキスト選択 → 🔗ボタン`,
           }}
         />
       </div>
