@@ -1,6 +1,34 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import MDEditor from "@uiw/react-md-editor";
-import { getNoteContentKey, load, save } from "../shared/storage.js";
+import { getNoteContentKey, load, save, saveImage, getImage } from "../shared/storage.js";
+
+// Custom image renderer to resolve short IDs
+const customComponents = {
+  img: ({ src, alt, ...props }) => {
+    // Check if it's a short ID reference (img:XXXXX)
+    if (src && src.startsWith("img:")) {
+      const imageId = src.slice(4);
+      const base64Data = getImage(imageId);
+      if (base64Data) {
+        return <img src={base64Data} alt={alt || "image"} style={{ maxWidth: "100%" }} {...props} />;
+      }
+      return <span style={{ color: "#999" }}>[画像が見つかりません]</span>;
+    }
+    return <img src={src} alt={alt} style={{ maxWidth: "100%" }} {...props} />;
+  },
+};
+
+function truncateUrl(url, maxLength = 15) {
+  if (!url || url.length <= maxLength) return url;
+  try {
+    const urlObj = new URL(url);
+    const domain = urlObj.hostname.replace(/^www\./, "");
+    if (domain.length <= maxLength) return domain;
+    return domain.slice(0, maxLength - 3) + "...";
+  } catch {
+    return url.slice(0, maxLength - 3) + "...";
+  }
+}
 
 export default function EditorPanel({ pageId, panelId, label }) {
   const [content, setContent] = useState("");
@@ -60,9 +88,24 @@ export default function EditorPanel({ pageId, panelId, label }) {
   };
 
   const insertImage = useCallback((base64Data) => {
-    const imageMarkdown = `![image](${base64Data})\n`;
+    // Save image with short ID
+    const imageId = saveImage(base64Data);
+    const imageMarkdown = `![image](img:${imageId})\n`;
     setContent((prev) => {
       const newContent = prev + imageMarkdown;
+      debouncedSave(newContent);
+      return newContent;
+    });
+  }, [debouncedSave]);
+
+  const insertLink = useCallback(() => {
+    const url = prompt("URLを入力してください:");
+    if (!url) return;
+
+    const displayText = truncateUrl(url);
+    const linkMarkdown = `[${displayText}](${url})`;
+    setContent((prev) => {
+      const newContent = prev + linkMarkdown;
       debouncedSave(newContent);
       return newContent;
     });
@@ -93,10 +136,24 @@ export default function EditorPanel({ pageId, panelId, label }) {
         e.preventDefault();
         const file = item.getAsFile();
         handleFileSelect(file);
-        break;
+        return;
       }
     }
-  }, [handleFileSelect]);
+
+    // Check for URL paste
+    const text = e.clipboardData.getData("text");
+    if (text && /^https?:\/\//.test(text.trim())) {
+      e.preventDefault();
+      const url = text.trim();
+      const displayText = truncateUrl(url);
+      const linkMarkdown = `[${displayText}](${url})`;
+      setContent((prev) => {
+        const newContent = prev + linkMarkdown;
+        debouncedSave(newContent);
+        return newContent;
+      });
+    }
+  }, [handleFileSelect, debouncedSave]);
 
   const handleFileInputChange = (e) => {
     const file = e.target.files?.[0];
@@ -149,7 +206,7 @@ export default function EditorPanel({ pageId, panelId, label }) {
         >
           {label}
         </span>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {saving && (
             <span style={{ fontSize: 11, color: "#aaa" }}>保存中...</span>
           )}
@@ -175,6 +232,22 @@ export default function EditorPanel({ pageId, panelId, label }) {
             title="画像をアップロード"
           >
             📷
+          </button>
+          <button
+            onClick={insertLink}
+            style={{
+              fontSize: 11,
+              color: "#888",
+              background: "none",
+              border: "1px solid #ddd",
+              borderRadius: 4,
+              padding: "2px 8px",
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+            title="リンクを挿入"
+          >
+            🔗
           </button>
           <div
             style={{
@@ -227,8 +300,11 @@ export default function EditorPanel({ pageId, panelId, label }) {
           hideToolbar={mode === "preview"}
           height={editorHeight}
           visibleDragbar={false}
+          previewOptions={{
+            components: customComponents,
+          }}
           textareaProps={{
-            placeholder: `${label}を入力...\n\n画像はドラッグ&ドロップ、ペースト、または📷ボタンでアップロードできます`,
+            placeholder: `${label}を入力...\n\n画像: ドラッグ&ドロップ / ペースト / 📷ボタン\nリンク: URLペースト / 🔗ボタン`,
           }}
         />
       </div>
