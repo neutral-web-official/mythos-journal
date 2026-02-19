@@ -5,8 +5,10 @@ import { getNoteContentKey, load, save } from "../shared/storage.js";
 export default function EditorPanel({ pageId, panelId, label }) {
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
+  const [mode, setMode] = useState("edit"); // "edit" or "preview"
   const [editorHeight, setEditorHeight] = useState(200);
   const containerRef = useRef(null);
+  const fileInputRef = useRef(null);
   const saveTimeoutRef = useRef(null);
   const storageKey = getNoteContentKey(pageId, panelId);
 
@@ -26,7 +28,6 @@ export default function EditorPanel({ pageId, panelId, label }) {
     updateHeight();
     window.addEventListener("resize", updateHeight);
 
-    // Use ResizeObserver for panel resize detection
     const resizeObserver = new ResizeObserver(updateHeight);
     if (containerRef.current) {
       resizeObserver.observe(containerRef.current);
@@ -58,6 +59,53 @@ export default function EditorPanel({ pageId, panelId, label }) {
     debouncedSave(newValue);
   };
 
+  const insertImage = useCallback((base64Data) => {
+    const imageMarkdown = `![image](${base64Data})\n`;
+    setContent((prev) => {
+      const newContent = prev + imageMarkdown;
+      debouncedSave(newContent);
+      return newContent;
+    });
+  }, [debouncedSave]);
+
+  const handleFileSelect = useCallback((file) => {
+    if (!file || !file.type.startsWith("image/")) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      insertImage(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  }, [insertImage]);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    handleFileSelect(file);
+  }, [handleFileSelect]);
+
+  const handlePaste = useCallback((e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        handleFileSelect(file);
+        break;
+      }
+    }
+  }, [handleFileSelect]);
+
+  const handleFileInputChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+    e.target.value = "";
+  };
+
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
@@ -78,13 +126,15 @@ export default function EditorPanel({ pageId, panelId, label }) {
         borderRadius: 6,
         overflow: "hidden",
       }}
+      onDrop={handleDrop}
+      onDragOver={(e) => e.preventDefault()}
     >
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          padding: "8px 12px",
+          padding: "6px 12px",
           borderBottom: "1px solid #f0f0f0",
           background: "#fafafa",
           flexShrink: 0,
@@ -99,22 +149,86 @@ export default function EditorPanel({ pageId, panelId, label }) {
         >
           {label}
         </span>
-        {saving && (
-          <span style={{ fontSize: 11, color: "#aaa" }}>保存中...</span>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {saving && (
+            <span style={{ fontSize: 11, color: "#aaa" }}>保存中...</span>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileInputChange}
+            style={{ display: "none" }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              fontSize: 11,
+              color: "#888",
+              background: "none",
+              border: "1px solid #ddd",
+              borderRadius: 4,
+              padding: "2px 8px",
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+            title="画像をアップロード"
+          >
+            📷
+          </button>
+          <div
+            style={{
+              display: "flex",
+              background: "#eee",
+              borderRadius: 4,
+              overflow: "hidden",
+            }}
+          >
+            <button
+              onClick={() => setMode("edit")}
+              style={{
+                fontSize: 11,
+                color: mode === "edit" ? "#333" : "#999",
+                background: mode === "edit" ? "#fff" : "transparent",
+                border: "none",
+                padding: "3px 10px",
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              編集
+            </button>
+            <button
+              onClick={() => setMode("preview")}
+              style={{
+                fontSize: 11,
+                color: mode === "preview" ? "#333" : "#999",
+                background: mode === "preview" ? "#fff" : "transparent",
+                border: "none",
+                padding: "3px 10px",
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              表示
+            </button>
+          </div>
+        </div>
       </div>
       <div
         style={{ flex: 1, overflow: "hidden", minHeight: 0 }}
         data-color-mode="light"
+        onPaste={handlePaste}
       >
         <MDEditor
           value={content}
           onChange={handleChange}
-          preview="live"
+          preview={mode === "preview" ? "preview" : "edit"}
+          hideToolbar={mode === "preview"}
           height={editorHeight}
           visibleDragbar={false}
           textareaProps={{
-            placeholder: `${label}を入力...`,
+            placeholder: `${label}を入力...\n\n画像はドラッグ&ドロップ、ペースト、または📷ボタンでアップロードできます`,
           }}
         />
       </div>

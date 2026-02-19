@@ -8,21 +8,21 @@ import {
 import { STORAGE_KEYS, load } from "../shared/storage.js";
 import EditorPanel from "./EditorPanel.jsx";
 
-const LEFT_PANELS = [
+const TOP_PANELS = [
   { id: "summary", label: "概要" },
+  { id: "lineage", label: "来歴・血統" },
   { id: "episode", label: "エピソード" },
-  { id: "question", label: "疑問点" },
 ];
 
-const RIGHT_PANELS = [
-  { id: "lineage", label: "来歴・血統" },
+const BOTTOM_PANELS = [
   { id: "art", label: "美術作品" },
+  { id: "question", label: "疑問点" },
   { id: "modern", label: "現代での引用" },
 ];
 
-function ColumnPanels({ panels, pageId }) {
+function RowPanels({ panels, pageId }) {
   return (
-    <PanelGroup direction="vertical">
+    <PanelGroup direction="horizontal">
       <Panel defaultSize={33} minSize={15}>
         <div style={{ height: "100%", padding: 4 }}>
           <EditorPanel
@@ -34,9 +34,9 @@ function ColumnPanels({ panels, pageId }) {
       </Panel>
       <PanelResizeHandle
         style={{
-          height: 6,
+          width: 6,
           background: "transparent",
-          cursor: "row-resize",
+          cursor: "col-resize",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -44,8 +44,8 @@ function ColumnPanels({ panels, pageId }) {
       >
         <div
           style={{
-            width: "80%",
-            height: 2,
+            width: 2,
+            height: "80%",
             background: "#e0e0e0",
             borderRadius: 1,
           }}
@@ -62,9 +62,9 @@ function ColumnPanels({ panels, pageId }) {
       </Panel>
       <PanelResizeHandle
         style={{
-          height: 6,
+          width: 6,
           background: "transparent",
-          cursor: "row-resize",
+          cursor: "col-resize",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -72,8 +72,8 @@ function ColumnPanels({ panels, pageId }) {
       >
         <div
           style={{
-            width: "80%",
-            height: 2,
+            width: 2,
+            height: "80%",
             background: "#e0e0e0",
             borderRadius: 1,
           }}
@@ -163,20 +163,20 @@ export default function NotePage() {
         </div>
       </div>
 
-      {/* 3x2 Grid of Editors with resizable panels */}
+      {/* 2 rows x 3 columns Grid of Editors */}
       <div style={{ flex: 1, padding: 8, overflow: "hidden" }}>
-        <PanelGroup direction="horizontal">
-          {/* Left Column */}
-          <Panel defaultSize={50} minSize={25}>
-            <ColumnPanels panels={LEFT_PANELS} pageId={pageId} />
+        <PanelGroup direction="vertical">
+          {/* Top Row */}
+          <Panel defaultSize={50} minSize={20}>
+            <RowPanels panels={TOP_PANELS} pageId={pageId} />
           </Panel>
 
-          {/* Horizontal Resize Handle */}
+          {/* Vertical Resize Handle */}
           <PanelResizeHandle
             style={{
-              width: 6,
+              height: 6,
               background: "transparent",
-              cursor: "col-resize",
+              cursor: "row-resize",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -184,17 +184,17 @@ export default function NotePage() {
           >
             <div
               style={{
-                width: 2,
-                height: "80%",
+                width: "80%",
+                height: 2,
                 background: "#e0e0e0",
                 borderRadius: 1,
               }}
             />
           </PanelResizeHandle>
 
-          {/* Right Column */}
-          <Panel defaultSize={50} minSize={25}>
-            <ColumnPanels panels={RIGHT_PANELS} pageId={pageId} />
+          {/* Bottom Row */}
+          <Panel defaultSize={50} minSize={20}>
+            <RowPanels panels={BOTTOM_PANELS} pageId={pageId} />
           </Panel>
         </PanelGroup>
       </div>
