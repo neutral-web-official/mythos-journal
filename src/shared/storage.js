@@ -51,3 +51,19 @@ export function getImage(id) {
 export function getAllImages() {
   return load(STORAGE_KEYS.images, {});
 }
+
+// URL storage with short IDs
+const URL_STORAGE_KEY = "mythos-note-urls-v1";
+
+export function saveUrl(url) {
+  const urls = load(URL_STORAGE_KEY, {});
+  const id = generateShortId();
+  urls[id] = url;
+  save(URL_STORAGE_KEY, urls);
+  return id;
+}
+
+export function getUrl(id) {
+  const urls = load(URL_STORAGE_KEY, {});
+  return urls[id] || null;
+}

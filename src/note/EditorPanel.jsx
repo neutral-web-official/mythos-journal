@@ -1,24 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import MDEditor from "@uiw/react-md-editor";
-import { getNoteContentKey, load, save, saveImage, getImage } from "../shared/storage.js";
+import { getNoteContentKey, load, save, saveImage, getImage, saveUrl, getUrl } from "../shared/storage.js";
 
-// Custom image renderer to resolve short IDs
-const customComponents = {
-  img: ({ src, alt, ...props }) => {
-    // Check if it's a short ID reference (img:XXXXX)
-    if (src && src.startsWith("img:")) {
-      const imageId = src.slice(4);
-      const base64Data = getImage(imageId);
-      if (base64Data) {
-        return <img src={base64Data} alt={alt || "image"} style={{ maxWidth: "100%" }} {...props} />;
-      }
-      return <span style={{ color: "#999" }}>[画像が見つかりません]</span>;
-    }
-    return <img src={src} alt={alt} style={{ maxWidth: "100%" }} {...props} />;
-  },
-};
+function truncateText(text, maxLength = 12) {
+  if (!text || text.length <= maxLength) return text;
+  return text.slice(0, maxLength) + "...";
+}
 
-function truncateUrl(url, maxLength = 15) {
+function truncateUrlForDisplay(url, maxLength = 12) {
   if (!url || url.length <= maxLength) return url;
   try {
     const urlObj = new URL(url);
@@ -30,10 +19,37 @@ function truncateUrl(url, maxLength = 15) {
   }
 }
 
+// Custom components to resolve short IDs
+const customComponents = {
+  img: ({ src, alt, ...props }) => {
+    if (src && src.startsWith("img:")) {
+      const imageId = src.slice(4);
+      const base64Data = getImage(imageId);
+      if (base64Data) {
+        return <img src={base64Data} alt={alt || "image"} style={{ maxWidth: "100%" }} {...props} />;
+      }
+      return <span style={{ color: "#999" }}>[画像が見つかりません]</span>;
+    }
+    return <img src={src} alt={alt} style={{ maxWidth: "100%" }} {...props} />;
+  },
+  a: ({ href, children, ...props }) => {
+    let actualUrl = href;
+    if (href && href.startsWith("url:")) {
+      const urlId = href.slice(4);
+      actualUrl = getUrl(urlId) || href;
+    }
+    return (
+      <a href={actualUrl} target="_blank" rel="noopener noreferrer" {...props}>
+        {children}
+      </a>
+    );
+  },
+};
+
 export default function EditorPanel({ pageId, panelId, label }) {
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
-  const [mode, setMode] = useState("edit"); // "edit" or "preview"
+  const [mode, setMode] = useState("edit");
   const [editorHeight, setEditorHeight] = useState(200);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -88,7 +104,6 @@ export default function EditorPanel({ pageId, panelId, label }) {
   };
 
   const insertImage = useCallback((base64Data) => {
-    // Save image with short ID
     const imageId = saveImage(base64Data);
     const imageMarkdown = `![image](img:${imageId})\n`;
     setContent((prev) => {
@@ -98,18 +113,23 @@ export default function EditorPanel({ pageId, panelId, label }) {
     });
   }, [debouncedSave]);
 
+  const createLinkMarkdown = useCallback((url) => {
+    const urlId = saveUrl(url);
+    const displayText = truncateUrlForDisplay(url);
+    return `[${displayText}](url:${urlId})`;
+  }, []);
+
   const insertLink = useCallback(() => {
     const url = prompt("URLを入力してください:");
     if (!url) return;
 
-    const displayText = truncateUrl(url);
-    const linkMarkdown = `[${displayText}](${url})`;
+    const linkMarkdown = createLinkMarkdown(url);
     setContent((prev) => {
       const newContent = prev + linkMarkdown;
       debouncedSave(newContent);
       return newContent;
     });
-  }, [debouncedSave]);
+  }, [createLinkMarkdown, debouncedSave]);
 
   const handleFileSelect = useCallback((file) => {
     if (!file || !file.type.startsWith("image/")) return;
@@ -145,15 +165,14 @@ export default function EditorPanel({ pageId, panelId, label }) {
     if (text && /^https?:\/\//.test(text.trim())) {
       e.preventDefault();
       const url = text.trim();
-      const displayText = truncateUrl(url);
-      const linkMarkdown = `[${displayText}](${url})`;
+      const linkMarkdown = createLinkMarkdown(url);
       setContent((prev) => {
         const newContent = prev + linkMarkdown;
         debouncedSave(newContent);
         return newContent;
       });
     }
-  }, [handleFileSelect, debouncedSave]);
+  }, [handleFileSelect, createLinkMarkdown, debouncedSave]);
 
   const handleFileInputChange = (e) => {
     const file = e.target.files?.[0];
